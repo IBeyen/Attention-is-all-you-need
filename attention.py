@@ -41,11 +41,12 @@ class Multihead_Attention:
     W_O: torch.Tensor
         Tensor holding weight matrix for final output transformation
     """
-    def __init__(self, h, d_model, d_k, d_v):
+    def __init__(self, h, d_model, d_k, d_v, mask=None):
         self.num_heads = h
         self.d_model = d_model
         self.d_k = d_k
         self.d_v = d_v
+        self.mask = mask
         
         self.W_Q = torch.rand(h, d_model, d_k)
         self.W_K = torch.rand(h, d_model, d_k)
@@ -67,8 +68,8 @@ class Multihead_Attention:
     mask: Default None,  Torch.Tensor
         Boolean matrix used to modify Q@K.T before softmax
     """
-    def forward(self, Q, K, V, mask=None):
-        heads = [attention(Q*self.W_Q[i], K*self.W_K[i], V*self.W_V[i], mask) for i in range(self.num_heads)]
+    def forward(self, Q, K, V):
+        heads = [attention(Q*self.W_Q[i], K*self.W_K[i], V*self.W_V[i], self.mask) for i in range(self.num_heads)]
         concat = torch.concat(heads)
         result = concat@self.W_O
         return result

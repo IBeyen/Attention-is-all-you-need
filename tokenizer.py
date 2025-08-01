@@ -3,6 +3,19 @@ def get_UTF8(text):
     tokens = list(map(int, tokens)) # Converts string to list with tokens in [0, 255]
     return tokens
 
+"""
+Takes a list of tokens and returns the number of each pair of neighboring tokens
+
+Parameters
+------------
+tokens_list: List[int]
+    List of tokenized string
+    
+Returns
+------------
+Dictionary [(int, int) -> int]
+    map from pairs to counts
+"""
 def get_pairs(tokens_list):
     pair_counts = {} # pair -> count
     for i in range(len(tokens_list)-1):
@@ -10,6 +23,23 @@ def get_pairs(tokens_list):
         pair_counts[pair] = pair_counts.get(pair, 0)+1
     return pair_counts
 
+""" 
+Takes a list of tokens and and merges all occurrences of a given pair to a single new token
+
+Parameters
+------------
+tokens_list: List[int]
+    Tokenized string
+pair: (int, int)
+    pair of tokens to find and replace
+new_token: int
+    new token to replace pair with
+    
+Returns
+------------
+List[int]
+    A copy of tokens_list with all occurrences of pair replaced with new_token
+"""
 def token_merge(tokens_list, pair, new_token):
     new_tokens_list = tokens_list.copy()
     for i in reversed(range(len(new_tokens_list)-1)):
