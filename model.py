@@ -13,6 +13,7 @@ def positional_encoder(seq_len, d_model):
     
 class FFN(nn.Module):
     def __init__(self, d_model):
+        super().__init__()
         self.d_model= d_model
         self.layer_1 = nn.Linear(self.d_model, self.d_model)
         self.layer_2 = nn.Linear(self.d_model, self.d_model)
@@ -25,6 +26,7 @@ class FFN(nn.Module):
     
 class Encoder(nn.Module):
     def __init__(self, h, d_model, d_k, d_v):
+        super().__init__()
         self.num_head = h
         self.d_k = d_k
         self.d_v = d_v
@@ -34,45 +36,51 @@ class Encoder(nn.Module):
         self.FF = FFN(d_model)
     
     def forward(self, x):
-        x += self.multihead_att(x, x, x)
+        x = x + self.multihead_att(x, x, x)
         x = F.normalize(x)
-        x += self.FF(x)
+        x = x + self.FF(x)
         return x
     
 class Decoder(nn.Module):
     def __init__(self, h, d_model, d_k, d_v):
+        super().__init__()
         self.num_head = h
         self.d_k = d_k
         self.d_v = d_v
         self.d_model = d_model
         
-        self.multihead_masked_att = Multihead_Attention(h, d_model, d_k, d_v, mask=torch.trui(torch.ones((d_k, d_k)), diagonal=1))
+        self.multihead_masked_att = Multihead_Attention(h, d_model, d_k, d_v, mask=True)
         self.multihead_att = Multihead_Attention(h, d_model, d_k, d_v)
         self.FF = FFN(d_model)
     
     def forward(self, x, encoder_output):
         x = self.multihead_masked_att(x, x, x)
         x = F.normalize(x)
-        x += self.multihead_att(encoder_output, encoder_output, x)
+        x = x + self.multihead_att(encoder_output, encoder_output, x)
         x = F.normalize(x)
-        x += self.FF(x)
+        x = x + self.FF(x)
         x = F.normalize(x)
         return x
     
 class Transformer(nn.Module):
     def __init__(self, h, d_model, d_k, d_v, num_tokens):
+        super().__init__()
         self.num_head = h
         self.d_k = d_k
         self.d_v = d_v
         self.d_model = d_model
         self.num_tokens = num_tokens
         
+        self.embeddings_1 = nn.Embedding(num_embeddings=num_tokens, embedding_dim=d_model, padding_idx=2)
+        self.embeddings_2 = nn.Embedding(num_embeddings=num_tokens, embedding_dim=d_model, padding_idx=2)
         self.encoder = Encoder(h, d_model, d_k, d_v)
         self.decoder = Decoder(h, d_model, d_k, d_v)
         
         self.linear = nn.Linear(d_model, num_tokens)
         
     def forward(self, x_1, x_2):
+        x_1 = self.embeddings_1(x_1)
+        x_2 = self.embeddings_2(x_2)
         encoder_output = self.encoder(x_1)
         decoder_output = self.decoder(x_2, encoder_output)
         out = self.linear(decoder_output)

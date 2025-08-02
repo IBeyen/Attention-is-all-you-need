@@ -1,38 +1,46 @@
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
-
-train = pd.read_csv("WMT 2014 English-German\wmt14_translate_de-en_train.csv", chunksize=10)
-test = pd.read_csv("WMT 2014 English-German\wmt14_translate_de-en_test.csv")
-val = pd.read_csv("WMT 2014 English-German\wmt14_translate_de-en_validation.csv")
+from tokenizer import *
+import torch
 
 """ 
 The train dataset is too big to load all at once as a pd.Dataframe so we will do it in chunks
 """
-class TrainDataset(Dataset):
-    def __init__(self, path):
-        if train:
-            self.chunk = 10000
-        else:
-            self.chunk = -1
-            
+BOS_ID = 0
+EOS_ID = 1
+PAD_ID = 2
+
+def collate_fn(batch):
+    src, tgt_in, tgt_out = zip(*batch)
+    src = torch.stack(list(src))
+    tgt_in = torch.stack(list(tgt_in))
+    tgt_out = torch.stack(list(tgt_out))
+    return src, tgt_in, tgt_out
+    
+
+class CustomDataset(Dataset):
+    def __init__(self, path, merges_en, merges_de, src_max_len, tgt_max_len):
+        super().__init__()
         self.path = path
-        self.size = -1
-        self.iterator = pd.read_csv(path, chunksize=10000)
-        self.data = self.iterator.get_chunk()
+        self.merges_en, self.merges_de = merges_en, merges_de
+        self.data = pd.read_csv(path)
+        self.src_max_len = src_max_len
+        self.tgt_max_len = tgt_max_len
         
     def __len__(self):
-        if self.size == -1:
-            start = True
-            reader = pd.read_csv(self.path, chunksize=10000)
-            while True:
-                data = reader.get_chunk()
-                if data.index.values[0] == 0:
-                    if not start:
-                        return self.size
-                self.size += len(data)
-                start = False
-        return self.size
+        return len(self.data)
     
     def __getitem__(self, idx):
-        pass
-            
+        x, y = self.data.iloc[idx]["de"], self.data.iloc[idx]["en"]
+        x, y = encode_tokens(x, self.merges_de), encode_tokens(y, self.merges_en)
+        src_tokens = x
+        tgt_in = [BOS_ID] + y
+        tgt_out = y + [EOS_ID]
+        
+        src_tokens += [PAD_ID for i in range(self.src_max_len-len(src_tokens))]
+        tgt_in += [PAD_ID for i in range(self.tgt_max_len-len(tgt_in))]
+        tgt_out += [PAD_ID for i in range(self.tgt_max_len-len(tgt_out))]
+        src_tokens = src_tokens[:self.src_max_len]
+        tgt_in = tgt_in[:self.tgt_max_len]
+        tgt_out = tgt_out[:self.tgt_max_len]
+        return torch.Tensor(src_tokens), torch.Tensor(tgt_in), torch.Tensor(tgt_out)

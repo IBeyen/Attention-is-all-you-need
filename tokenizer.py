@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 def get_UTF8(text):
     tokens = text.encode('utf-8')
     tokens = list(map(int, tokens)) # Converts string to list with tokens in [0, 255]
@@ -52,16 +54,14 @@ def train_tokenizer(string, vocab_size):
     vocab = {} # idx -> byte string
     merges = {} # pair -> idx
     for i in range(256):
-        vocab[i] = bytes([i])
+        vocab[i+3] = bytes([i])
     tokens = get_UTF8(string)
-    idx = 256
-    while len(vocab.keys()) < vocab_size:
+    for idx in tqdm(range(259, vocab_size)):
         pairs = get_pairs(tokens)
         most_pair = max(pairs, key=pairs.get)
         merges[most_pair] = idx
         vocab[idx] = vocab[most_pair[0]] + vocab[most_pair[1]]
         tokens = token_merge(tokens, most_pair, idx)
-        idx += 1
         
     return merges, vocab
 
